@@ -1,10 +1,19 @@
 
-import { parseFlags } from "./parseFlags.ts";
+import { Flags, parseFlags } from "./parseFlags.ts";
 import { trim, getDuration } from "./ffwrapper.ts";
+import { FFTrimError } from "./error.ts";
 
-// === MAIN PART ===
-
-let flags = parseFlags();
+let flags: Flags;
+try {
+	flags = parseFlags();
+} catch (err) {
+	if (err instanceof FFTrimError) {
+		console.log(`usage: fftrim -i <input> -o <output> [-s <start>] [-e <end>] [-ts <size>] [-d]`);
+		Deno.exit(1);
+	} else {
+		throw err;
+	}
+}
 let {
 	start,
 	end,
@@ -14,6 +23,7 @@ let {
 	dampenAudio
 } = flags;
 
+// set defaults for start/end
 if (start === undefined) {
 	start = 0;
 }
@@ -22,6 +32,7 @@ if (end === undefined) {
 }
 const duration = end-start;
 
+// trim the video (async)
 const progress = trim({
 	start,
 	end,
@@ -31,6 +42,7 @@ const progress = trim({
 	dampenAudio
 });
 
+// print out progress on the trimming
 const encoder = new TextEncoder();
 for await (const secondsDone of progress) {
 	const percent = secondsDone / duration;
