@@ -5,7 +5,7 @@ a personal project to make an ffmpeg wrapper that trims videos
 ### usage
 
 | flag | description | usage |
-| ----- | ----- |
+| ----- | ----- | ----- |
 | `start` or `s` | specify start time in video | `-s 2m40.3s` (2 minutes, 40.3 seconds) |
 | `end` or `e` | specify end time in video | `-e 2h45m29s` (2 hours, 45 minutes, 29 seconds) |
 | `targetsize` or `ts` | specify target size of video | `-t 4m` (4 MB) |
