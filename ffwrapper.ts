@@ -29,7 +29,7 @@ export async function* trim(options: TrimArgs): AsyncGenerator<number> {
 
 	const startArgs = start ? ["-ss", start.toString(10)] : [];
 	const endArgs = end ? ["-to", end.toString(10)] : [];
-	const bitrateArgs = bitrate ? ["-b:v", bitrate.toString(10)]: [];
+	const bitrateArgs = bitrate ? ["-b:v", bitrate.toString(10)] : [];
 	const dampenArgs = dampenAudio ? ["-af", "loudnorm"] : [];
 
 	const p = Deno.run({
@@ -64,9 +64,9 @@ async function readDurations(stderr: Deno.Reader): Promise<number> {
 			break;
 		}
 		const groups = durationRegex.exec(line);
-		const result = groups?.pop() ?? [];
+		const result = groups?.[1] ?? "";
 		if (result.length > 0) {
-			duration += clockToSeconds(result[0]);
+			duration += clockToSeconds(result);
 		}
 	}
 

@@ -2,10 +2,7 @@
 
 // parses a clock time (ie "05:20:20.5") to a number of seconds (ie "18140.5")
 export function clockToSeconds(time: string): number {
-	let [hourStr, minuteStr, secondStr] = time.split(":");
-
-	let [hours, minutes, seconds] = [hourStr, minuteStr, secondStr]
-		.map(str => parseFloat(str));
+	let [hours, minutes, seconds] = time.split(":").map(str => parseFloat(str));
 	
 	return hours * 60 * 60 + minutes * 60 + seconds;
 }

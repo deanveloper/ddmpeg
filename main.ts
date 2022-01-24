@@ -28,7 +28,7 @@ if (start === undefined) {
 	start = 0;
 }
 if (end === undefined) {
-	end = await getDuration(outputFile);
+	end = await getDuration(inputFile);
 }
 const duration = end-start;
 
@@ -48,6 +48,12 @@ for await (const secondsDone of progress) {
 	const percent = secondsDone / duration;
 	Deno.stdout.writeSync(encoder.encode(`\r${progressBar(30, percent)} (${(percent*100).toFixed(1)}%)`));
 }
+
+// write a newline
+Deno.stdout.writeSync(new Uint8Array([10]));
+
+
+// ======== UTILITY FUNCTIONS =========
 
 // simple progress bar
 function progressBar(width: number, percent: number) {
