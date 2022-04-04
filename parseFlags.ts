@@ -1,16 +1,16 @@
-
 import { parse } from "https://deno.land/std/flags/mod.ts";
 import { FFTrimError } from "./error.ts";
 import { hmsToSeconds } from "./timeFormats.ts";
 
 export type Flags = {
-	start: number|undefined,
-	end: number|undefined,
-	targetSize: number|undefined,
-	inputFile: string,
-	outputFile: string,
-	dampenAudio: boolean
-}
+	start: number | undefined;
+	end: number | undefined;
+	targetSize: number | undefined;
+	audioWeights: number[];
+	inputFile: string;
+	outputFile: string;
+	dampenAudio: boolean;
+};
 
 export function parseFlags(): Flags {
 	const {
@@ -19,27 +19,31 @@ export function parseFlags(): Flags {
 		targetSize: targetSizeRaw,
 		inputFile,
 		outputFile,
+		audioWeights = "",
 		dampenAudio,
 	} = parseFlagsRaw();
 
 	const start = startRaw ? hmsToSeconds(startRaw) : undefined;
+	const audioWeightsParsed = parseAudioWeights(audioWeights);
 	const end = endRaw ? hmsToSeconds(endRaw) : undefined;
 	const targetSize = targetSizeRaw ? shortFormToBytes(targetSizeRaw) : undefined;
+
 	if (inputFile === undefined) {
 		throw new FFTrimError("input file is required (-i)");
 	}
 	if (outputFile === undefined) {
 		throw new FFTrimError("output file is required (-o)");
 	}
-	
+
 	return {
 		start,
 		end,
 		targetSize,
 		inputFile,
 		outputFile,
+		audioWeights: audioWeightsParsed,
 		dampenAudio,
-	}
+	};
 }
 
 function shortFormToBytes(shortForm: string): number {
@@ -61,16 +65,32 @@ function shortFormToBytes(shortForm: string): number {
 	}
 
 	switch (lastChar) {
-		case 'b':
+		case "b":
 			return num;
-		case 'k':
+		case "k":
 			return num * 1_000;
-		case 'm':
+		case "m":
 			return num * 1_000_000;
-		case 'g':
+		case "g":
 			return num * 1_000_000_000;
 		default:
-			throw new FFTrimError(`invalid unit: ${lastChar} (must be one of {b,k,m,g})`);
+			throw new FFTrimError(
+				`invalid unit: ${lastChar} (must be one of {b,k,m,g})`,
+			);
+	}
+}
+
+function parseAudioWeights(weights: string): number[] {
+	try {
+		return weights.split(",").map((str) => {
+			const i = parseInt(str);
+			if (isNaN(i)) {
+				throw new FFTrimError("audio weights must be in the form w1,w2,w3...");
+			}
+			return i;
+		});
+	} catch (e) {
+		throw new FFTrimError("audio weights must be in the form w1,w2,w3...");
 	}
 }
 
@@ -78,24 +98,32 @@ function shortFormToBytes(shortForm: string): number {
 function parseFlagsRaw() {
 	const flags = parse(Deno.args, {
 		string: [
-			"start", "s",
-			"end", "e",
-			"input", "i",
-			"output", "o",
-			"targetsize", "ts"
+			"start",
+			"s",
+			"end",
+			"e",
+			"input",
+			"i",
+			"output",
+			"o",
+			"targetsize",
+			"ts",
+			"audioweights",
+			"aw",
 		],
 		boolean: [
-			"dampen", "d"
-		]
+			"dampen",
+			"d",
+		],
 	});
-	
+
 	return {
 		start: flags.start ?? flags.s,
 		end: flags.end ?? flags.e,
 		targetSize: flags.targetsize ?? flags.ts,
 		inputFile: flags.input ?? flags.i ?? flags._[0],
 		outputFile: flags.output ?? flags.o,
+		audioWeights: flags.audioweights ?? flags.aw,
 		dampenAudio: flags.dampen || flags.d,
-	}
-
+	};
 }

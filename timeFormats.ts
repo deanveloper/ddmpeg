@@ -1,9 +1,7 @@
-
-
 // parses a clock time (ie "05:20:20.5") to a number of seconds (ie "18140.5")
 export function clockToSeconds(time: string): number {
-	let [hours, minutes, seconds] = time.split(":").map(str => parseFloat(str));
-	
+	let [hours, minutes, seconds] = time.split(":").map((str) => parseFloat(str));
+
 	return hours * 60 * 60 + minutes * 60 + seconds;
 }
 
@@ -17,18 +15,18 @@ export function hmsToSeconds(time: string): number {
 
 	for (const c of time) {
 		const cCode = c.charCodeAt(0);
-		const isNumber = cCode >= '0'.charCodeAt(0) && cCode <= '9'.charCodeAt(0);
-		if (isNumber || c === '.') {
+		const isNumber = cCode >= "0".charCodeAt(0) && cCode <= "9".charCodeAt(0);
+		if (isNumber || c === ".") {
 			currentNumber += c;
 		} else {
-			switch(c) {
-				case 'h':
+			switch (c) {
+				case "h":
 					hourStr = currentNumber;
 					break;
-				case 'm':
+				case "m":
 					minuteStr = currentNumber;
 					break;
-				case 's':
+				case "s":
 					secondStr = currentNumber;
 					break;
 				default:
@@ -39,8 +37,8 @@ export function hmsToSeconds(time: string): number {
 	}
 
 	let [hours, minutes, seconds] = [hourStr, minuteStr, secondStr]
-		.map(str => str || "0")
-		.map(str => parseFloat(str));
-	
+		.map((str) => str || "0")
+		.map((str) => parseFloat(str));
+
 	return hours * 60 * 60 + minutes * 60 + seconds;
 }
