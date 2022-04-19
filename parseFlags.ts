@@ -1,12 +1,12 @@
 import { parse } from "https://deno.land/std/flags/mod.ts";
 import { FFTrimError } from "./error.ts";
-import { hmsToSeconds } from "./timeFormats.ts";
+import { hmsRangeToSeconds } from "./timeFormats.ts";
 
 export type Flags = {
 	start: number | undefined;
 	end: number | undefined;
-	targetSize: number | undefined;
-	audioWeights: number[];
+	size: number | undefined;
+	mergeWeights: number[] | undefined;
 	inputFile: string;
 	outputFile: string;
 	dampenAudio: boolean;
@@ -14,19 +14,17 @@ export type Flags = {
 
 export function parseFlags(): Flags {
 	const {
-		start: startRaw,
-		end: endRaw,
-		targetSize: targetSizeRaw,
+		trim: trimRaw,
+		size: sizeRaw,
 		inputFile,
 		outputFile,
-		audioWeights = "",
+		merge = "",
 		dampenAudio,
 	} = parseFlagsRaw();
 
-	const start = startRaw ? hmsToSeconds(startRaw) : undefined;
-	const audioWeightsParsed = parseAudioWeights(audioWeights);
-	const end = endRaw ? hmsToSeconds(endRaw) : undefined;
-	const targetSize = targetSizeRaw ? shortFormToBytes(targetSizeRaw) : undefined;
+	const [start, end] = trimRaw === undefined ? [undefined, undefined] : hmsRangeToSeconds(trimRaw);
+	const audioWeightsParsed = merge === "" ? undefined : parseAudioWeights(merge);
+	const size = sizeRaw ? shortFormToBytes(sizeRaw) : undefined;
 
 	if (inputFile === undefined) {
 		throw new FFTrimError("input file is required (-i)");
@@ -38,10 +36,10 @@ export function parseFlags(): Flags {
 	return {
 		start,
 		end,
-		targetSize,
+		size,
 		inputFile,
 		outputFile,
-		audioWeights: audioWeightsParsed,
+		mergeWeights: audioWeightsParsed,
 		dampenAudio,
 	};
 }
@@ -98,18 +96,16 @@ function parseAudioWeights(weights: string): number[] {
 function parseFlagsRaw() {
 	const flags = parse(Deno.args, {
 		string: [
-			"start",
-			"s",
-			"end",
-			"e",
+			"trim",
+			"t",
 			"input",
 			"i",
 			"output",
 			"o",
-			"targetsize",
-			"ts",
-			"audioweights",
-			"aw",
+			"size",
+			"s",
+			"merge",
+			"m",
 		],
 		boolean: [
 			"dampen",
@@ -118,12 +114,11 @@ function parseFlagsRaw() {
 	});
 
 	return {
-		start: flags.start ?? flags.s,
-		end: flags.end ?? flags.e,
-		targetSize: flags.targetsize ?? flags.ts,
+		trim: flags.trim ?? flags.t,
+		size: flags.size ?? flags.s,
 		inputFile: flags.input ?? flags.i ?? flags._[0],
 		outputFile: flags.output ?? flags.o,
-		audioWeights: flags.audioweights ?? flags.aw,
+		merge: flags.merge ?? flags.m,
 		dampenAudio: flags.dampen || flags.d,
 	};
 }

@@ -7,6 +7,7 @@ export type VideoData = {
 	streams: Stream[];
 };
 export type Stream = {
+	index: number;
 	type: "video" | "audio";
 	codec: string;
 };
@@ -17,7 +18,7 @@ export type TrimArgs = {
 	bitrate: number | undefined;
 	inputFile: string;
 	outputFile: string;
-	audioWeights: number[];
+	audioWeights: Map<number, number>;
 	dampenAudio: boolean;
 };
 
@@ -29,7 +30,7 @@ export async function getVideoData(file: string): Promise<VideoData> {
 			file,
 			"-v", "error",
 			"-print_format", "json",
-			"-show_streams"
+			"-show_streams", "-show_format"
 		],
 		stdout: "piped",
 		stderr: "null",
@@ -39,12 +40,13 @@ export async function getVideoData(file: string): Promise<VideoData> {
 	const videoData = {
 		durationSeconds: Number(output.format.duration),
 		streams: output.streams.map((stream: any) => ({
+			index: stream.index,
 			type: stream.codec_type,
 			codec: stream.codec_name,
 		})),
 	};
 	if (!validateVideoData(videoData)) {
-		throw new Error(`invalid video data: ${videoData}`);
+		throw new Error(`invalid video data: ${JSON.stringify(videoData)}`);
 	}
 	return videoData;
 }
@@ -66,22 +68,26 @@ export async function* trim(options: TrimArgs): AsyncGenerator<number> {
 	const dampenArgs = dampenAudio ? ["-af", "loudnorm"] : [];
 	const audioWeightsArgs = parseAudioWeightsArgs(audioWeights);
 
-	const p = Deno.run({
-		cmd: [
-			"ffmpeg",
+	const cmd = [
+		"ffmpeg",
 
-			"-i",
-			inputFile,
-			...startArgs,
-			...endArgs,
-			...dampenArgs,
-			...bitrateArgs,
-			...audioWeightsArgs,
-			"-loglevel",
-			"level+info",
-			"-y",
-			outputFile,
-		],
+		"-i",
+		inputFile,
+		...startArgs,
+		...endArgs,
+		...dampenArgs,
+		...bitrateArgs,
+		...audioWeightsArgs,
+		"-loglevel",
+		"level+info",
+		"-y",
+		outputFile,
+	];
+
+	console.log(cmd.map((s) => `"${s}"`).join(" "));
+
+	const p = Deno.run({
+		cmd,
 		stdout: "null",
 		stderr: "piped",
 	});
@@ -110,34 +116,39 @@ async function* readProgressUpdates(
 	}
 }
 
-function parseAudioWeightsArgs(audioWeights: number[]): string[] {
-	// if all weights are equal
-	if (audioWeights.every((item) => audioWeights.indexOf(item) === 0)) {
-		let str = "";
-		let weights = "";
-		for (const i in audioWeights) {
-			str += `[0:a:${i}]`;
-		}
+// audioTracks:
+// represents which weights go to which tracks
+//
+// audioWeights:
+// if empty, we do not merge
+// if all weights are equal, we merge them without weights
+// if there are different weights, we merge them with weights
+function parseAudioWeightsArgs(audioWeights: Map<number, number>): string[] {
+	if (audioWeights.size === 0) {
+		return [];
 	}
 
-	const firstWeight = audioWeights.length ? audioWeights[0] : 0;
+	let weights = [];
+	const firstWeight = audioWeights.entries().next().value[1];
 	let hasDifferentWeights = false;
-	let str = "";
-	for (const i in audioWeights) {
-		str += `[0:a:${i}]`;
-		if (audioWeights[i] !== firstWeight) {
+	let amix = "";
+	for (const [track, weight] of audioWeights.entries()) {
+		amix += `[0:a:${track}]`;
+		if (weight !== firstWeight) {
 			hasDifferentWeights = true;
 		}
+		weights.push(weight);
 	}
-	str += `amix=${audioWeights.length}:longest`;
+
+	amix += `amix=inputs=${audioWeights.size}:duration=longest`;
 	if (hasDifferentWeights) {
-		str += `:weights=${audioWeights.join(" ")}`;
+		amix += `:weights=${weights.join(" ")}`;
 	}
-	str += "[aout]";
+	amix += "[aout]";
 
 	// deno-fmt-ignore
 	return [
-		"-filter_complex", str,
+		"-filter_complex", amix,
 		"-map", "0:V:0",
 		"-map", "[aout]",
 	];
@@ -147,6 +158,7 @@ function validateVideoData(data: any): data is VideoData {
 	if (!data || typeof data !== "object") {
 		return false;
 	}
+
 	if (typeof data.durationSeconds !== "number") {
 		return false;
 	}
@@ -158,7 +170,10 @@ function validateVideoData(data: any): data is VideoData {
 		if (!stream || typeof stream !== "object") {
 			return false;
 		}
-		if (stream.type !== "video" || stream.type !== "audio") {
+		if (typeof stream.index !== "number") {
+			return false;
+		}
+		if (stream.type !== "video" && stream.type !== "audio") {
 			return false;
 		}
 		if (typeof stream.codec !== "string") {

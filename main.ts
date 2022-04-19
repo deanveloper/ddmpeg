@@ -8,8 +8,9 @@ try {
 } catch (err) {
 	if (err instanceof FFTrimError) {
 		console.log(
-			`usage: fftrim -i <input> -o <output> [-s <start>] [-e <end>] [-ts <size>] [-d] [-as <weights>]`,
+			`usage: fftrim -i <input> -o <output> [-t <[start]:[end]>] [-ts <size>] [-d] [-as <weights>]`,
 		);
+		console.error("caused by: " + err);
 		Deno.exit(1);
 	} else {
 		throw err;
@@ -18,14 +19,15 @@ try {
 let {
 	start,
 	end,
-	targetSize,
+	size,
 	inputFile,
 	outputFile,
-	audioWeights,
+	mergeWeights,
 	dampenAudio,
 } = flags;
 
 const videoData = await getVideoData(inputFile);
+const audioStreams = videoData.streams.filter((stream) => stream.type === "audio");
 
 // set defaults for start/end
 if (start === undefined) {
@@ -34,18 +36,24 @@ if (start === undefined) {
 if (end === undefined) {
 	end = videoData.durationSeconds;
 }
-if (audioWeights.length === 0) {
-	audioWeights = videoData.streams
-		.filter((s) => s.type === "audio")
-		.map((_) => 1);
+
+const audioWeights = new Map<number, number>();
+if (mergeWeights) {
+	for (let i = mergeWeights.length; i < audioStreams.length; i++) {
+		mergeWeights[i] = 1;
+	}
 }
+mergeWeights?.forEach((weight, i) => {
+	audioWeights.set(i, weight);
+});
+
 const duration = end - start;
 
 // trim the video (async)
 const progress = trim({
 	start,
 	end,
-	bitrate: targetSize ? targetSize / duration : undefined,
+	bitrate: size ? size / duration : undefined,
 	inputFile,
 	outputFile,
 	audioWeights,
