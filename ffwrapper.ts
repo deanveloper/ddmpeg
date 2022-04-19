@@ -65,8 +65,8 @@ export async function* trim(options: TrimArgs): AsyncGenerator<number> {
 	const startArgs = start ? ["-ss", start.toString(10)] : [];
 	const endArgs = end ? ["-to", end.toString(10)] : [];
 	const bitrateArgs = bitrate ? ["-b:v", bitrate.toString(10)] : [];
-	const dampenArgs = dampenAudio ? ["-af", "loudnorm"] : [];
 	const audioWeightsArgs = parseAudioWeightsArgs(audioWeights);
+	const dampenArgs = dampenAudio ? ["-af", "loudnorm"] : [];
 
 	const cmd = [
 		"ffmpeg",
