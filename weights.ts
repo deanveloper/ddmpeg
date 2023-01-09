@@ -28,7 +28,7 @@ export function parseWeightsArray(weightsArray: number[] | undefined): Weights {
 		return {
 			type: "multi",
 			weights: nonzeroWeights,
-			canCopyAudio: true,
+			canCopyAudio: false,
 		};
 	} else {
 		return {
