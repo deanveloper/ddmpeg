@@ -1,6 +1,7 @@
-import { readLines, readStringDelim } from "https://deno.land/std/io/mod.ts";
+import { readStringDelim } from "https://deno.land/std/io/mod.ts";
 import { readAll } from "https://deno.land/std/streams/mod.ts";
 import { clockToSeconds } from "./timeFormats.ts";
+import { Weights } from "./weights.ts";
 
 export type VideoData = {
 	durationSeconds: number;
@@ -18,8 +19,8 @@ export type TrimArgs = {
 	bitrate: number | undefined;
 	inputFile: string;
 	outputFile: string;
-	audioWeights: Map<number, number>;
-	dampenAudio: boolean;
+	audioWeights?: Weights;
+	copyAudio: boolean;
 };
 
 export async function getVideoData(file: string): Promise<VideoData> {
@@ -59,14 +60,14 @@ export async function* trim(options: TrimArgs): AsyncGenerator<number> {
 		inputFile,
 		audioWeights,
 		outputFile,
-		dampenAudio,
+		copyAudio,
 	} = options;
 
 	const startArgs = start ? ["-ss", start.toString(10)] : [];
 	const endArgs = end ? ["-to", end.toString(10)] : [];
 	const bitrateArgs = bitrate ? ["-b:v", bitrate.toString(10)] : [];
-	const audioWeightsArgs = parseAudioWeightsArgs(audioWeights);
-	const dampenArgs = dampenAudio ? ["-af", "loudnorm"] : [];
+	const audioWeightsArgs = audioWeights ? parseAudioWeightsArgs(audioWeights) : [];
+	const copyAudioArgs = copyAudio ? ["-c:a", "copy"] : [];
 
 	const cmd = [
 		"ffmpeg",
@@ -75,9 +76,9 @@ export async function* trim(options: TrimArgs): AsyncGenerator<number> {
 		inputFile,
 		...startArgs,
 		...endArgs,
-		...dampenArgs,
 		...bitrateArgs,
 		...audioWeightsArgs,
+		...copyAudioArgs,
 		"-loglevel",
 		"level+info",
 		"-y",
@@ -118,40 +119,59 @@ async function* readProgressUpdates(
 
 // audioTracks:
 // represents which weights go to which tracks
-//
-// audioWeights:
-// if empty, we do not merge
-// if all weights are equal, we merge them without weights
-// if there are different weights, we merge them with weights
-function parseAudioWeightsArgs(audioWeights: Map<number, number>): string[] {
-	if (audioWeights.size === 0) {
-		return [];
+function parseAudioWeightsArgs(audioWeights: Weights): string[] {
+	// if empty, we remove all audio tracks
+	if (audioWeights.type === "none") {
+		return [
+			"-map",
+			"0",
+			"-map",
+			"0:a",
+		];
 	}
 
-	let weights = [];
-	const firstWeight = audioWeights.entries().next().value[1];
-	let hasDifferentWeights = false;
-	let amix = "";
-	for (const [track, weight] of audioWeights.entries()) {
-		amix += `[0:a:${track}]`;
-		if (weight !== firstWeight) {
-			hasDifferentWeights = true;
-		}
-		weights.push(weight);
+	if (audioWeights.type === "single") {
+		return [
+			"-map",
+			"0:v:0",
+			"-map",
+			`0:a:${audioWeights.weights.keys().next().value}`,
+		];
 	}
 
-	amix += `amix=inputs=${audioWeights.size}:duration=longest`;
-	if (hasDifferentWeights) {
-		amix += `:weights=${weights.join(" ")}`;
+	if (audioWeights.type === "multi") {
+		// deno-fmt-ignore
+		return [
+			"-filter_complex", amix(audioWeights.weights, false),
+			"-map", "0:V:0",
+			"-map", "[aout]",
+		];
 	}
-	amix += "[aout]";
 
+	// if (audioWeights.type === 'weighted') ...
 	// deno-fmt-ignore
 	return [
-		"-filter_complex", amix,
+		"-filter_complex", amix(audioWeights.weights, true),
 		"-map", "0:V:0",
 		"-map", "[aout]",
 	];
+}
+
+// takes weights, returns amix filter
+function amix(weights: Map<string, number>, useWeights: boolean): string {
+	let amix = "";
+	for (const track of weights.keys()) {
+		amix += `[0:a:${track}]`;
+	}
+
+	amix += `amix=inputs=${weights.size}:duration=longest`;
+
+	if (!useWeights) {
+		amix += `:weights=${[...weights.values()].join(" ")}`;
+	}
+	amix += "[aout]";
+
+	return amix;
 }
 
 function validateVideoData(data: any): data is VideoData {

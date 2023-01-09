@@ -9,7 +9,6 @@ export type Flags = {
 	mergeWeights: number[] | undefined;
 	inputFile: string;
 	outputFile: string;
-	dampenAudio: boolean;
 };
 
 export function parseFlags(): Flags {
@@ -19,7 +18,6 @@ export function parseFlags(): Flags {
 		inputFile,
 		outputFile,
 		merge = "",
-		dampenAudio,
 	} = parseFlagsRaw();
 
 	const [start, end] = trimRaw === undefined ? [undefined, undefined] : hmsRangeToSeconds(trimRaw);
@@ -40,7 +38,6 @@ export function parseFlags(): Flags {
 		inputFile,
 		outputFile,
 		mergeWeights: audioWeightsParsed,
-		dampenAudio,
 	};
 }
 

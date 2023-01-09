@@ -1,6 +1,7 @@
 import { Flags, parseFlags } from "./parseFlags.ts";
 import { getVideoData, trim } from "./ffwrapper.ts";
 import { FFTrimError } from "./error.ts";
+import { parseWeightsArray } from "./weights.ts";
 
 let flags: Flags;
 try {
@@ -23,7 +24,6 @@ let {
 	inputFile,
 	outputFile,
 	mergeWeights,
-	dampenAudio,
 } = flags;
 
 const videoData = await getVideoData(inputFile);
@@ -37,17 +37,17 @@ if (end === undefined) {
 	end = videoData.durationSeconds;
 }
 
-const audioWeights = new Map<number, number>();
+// parse audio weights
 if (mergeWeights) {
 	for (let i = mergeWeights.length; i < audioStreams.length; i++) {
 		mergeWeights[i] = 1;
 	}
 }
-mergeWeights?.forEach((weight, i) => {
-	audioWeights.set(i, weight);
-});
+const audioWeights = parseWeightsArray(mergeWeights);
 
 const duration = end - start;
+
+const copyAudio = audioWeights.canCopyAudio;
 
 // trim the video (async)
 const progress = trim({
@@ -57,7 +57,7 @@ const progress = trim({
 	inputFile,
 	outputFile,
 	audioWeights,
-	dampenAudio,
+	copyAudio,
 });
 
 // print out progress on the trimming
