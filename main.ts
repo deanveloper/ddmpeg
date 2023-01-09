@@ -9,7 +9,7 @@ try {
 } catch (err) {
 	if (err instanceof FFTrimError) {
 		console.log(
-			`usage: ddmpeg -i <input> -o <output> [-t <[start]:[end]>] [-ts <size>] [-d] [-as <weights>]`,
+			`usage: ddmpeg -i <input> -o <output> [-t <[start]:[end]>] [-s <size>] [-m <w1>[,w2,w3...]]`,
 		);
 		console.error("caused by: " + err);
 		Deno.exit(1);

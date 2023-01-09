@@ -6,13 +6,13 @@ a personal project to make an ffmpeg wrapper that trims videos, sets target file
 
 `ddmpeg -i <input> -o <output> [-r <range>] [-s <size>] [-m <1[,...]>] [-d]`
 
-| flag            | description                                                                                        | usage            |
-| --------------- | -------------------------------------------------------------------------------------------------- | ---------------- |
-| `input` or `i`  | specify input file                                                                                 | `-i infile.mp4`  |
-| `output` or `o` | specify output file                                                                                | `-o outfile.mp4` |
-| `trim` or `t`   | specify trim range. must contain a dash, remove one argument to specify the start/end of the video | `-t 2m40s:3m`    |
-| `size` or `s`   | specify target size of video                                                                       | `-s 4m` (4 MB)   |
-| `merge` or `m`  | merge audio tracks into one track, can optionally specify weights for each track                   | `-m` or `-m 2,3` |
+| flag            | description                                                                                                                     | usage            |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `input` or `i`  | specify input file                                                                                                              | `-i infile.mp4`  |
+| `output` or `o` | specify output file                                                                                                             | `-o outfile.mp4` |
+| `trim` or `t`   | specify trim range. must contain a dash, remove one argument to specify the start/end of the video                              | `-t 2m40s:3m`    |
+| `size` or `s`   | specify target size of video                                                                                                    | `-s 4m` (4 MB)   |
+| `merge` or `m`  | merge audio tracks into one track, can optionally specify weights for each track. All unlisted tracks assume `1` as the weight. | `-m` or `-m 2,3` |
 
 ## examples
 
