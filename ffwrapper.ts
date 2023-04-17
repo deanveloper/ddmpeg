@@ -166,7 +166,7 @@ function amix(weights: Map<string, number>, useWeights: boolean): string {
 
 	amix += `amix=inputs=${weights.size}:duration=longest`;
 
-	if (!useWeights) {
+	if (useWeights) {
 		amix += `:weights=${[...weights.values()].join(" ")}`;
 	}
 	amix += "[aout]";
